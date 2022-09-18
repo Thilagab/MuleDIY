@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="implementationFlow" doc:id="126edf37-7f12-4335-b0fa-78a0273c5505" >
+		<http:listener doc:name="Listener" doc:id="9f114e14-f3d9-4ba9-a969-05647a4045e8" config-ref="HTTP_Listener_config" path="/humonResource" allowedMethods="GET"/>
+		<set-variable value="#[attributes.queryParams.name]" doc:name="Name of the customer" doc:id="1e5fbd29-1ef3-4f69-879e-e0ade35afb13" variableName="customerName" />
+		<http:request method="GET" doc:name="Request customer details" doc:id="a655cd84-365b-47ab-9f42-1d6b79598a58" config-ref="HTTP_Request_configuration" path="/customer">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"enquiredBy" : "Customer representative CRS107",
+	"client_secret" : "c686bBB84E1745b4BAfaE8Cc7006A887",
+	"client_id" : "8d104a2f68b04216a8c8e0fbb5e41ae3"
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"name" : attributes.queryParams.name
+}]]]></http:query-params>
+		</http:request>
+		<foreach doc:name="For Each" doc:id="c2d7784d-fd7a-4b6a-a5a6-1205a7d9b806" collection="#[payload.name]"/>
+		<ee:transform doc:name="Transform Message" doc:id="cee5dc9f-e957-4355-b34a-de9c5a170477" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

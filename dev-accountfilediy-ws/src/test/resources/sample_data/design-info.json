@@ -1,0 +1,33 @@
+{
+  "sampleData": {
+    "e14c3086-379c-4e70-ab25-e56273ba3c8f": {
+      "payload": "sample_data/java.dwl"
+    },
+    "3f8f03b8-c96e-4e42-a195-418faee47bf1": {
+      "payload": "sample_data/list_java.dwl"
+    },
+    "ab34f243-4c7d-49bb-9464-aab16edb6bc8": {
+      "payload": "sample_data/list_java_1.dwl"
+    },
+    "ed550c48-2f33-45c3-9cbe-d645d4a86494": {
+      "payload": "sample_data/list_java_2.dwl"
+    },
+    "02324597-66f5-44fd-8db5-528e4348d4f1": {
+      "payload": "sample_data/defaultstringtype.dwl"
+    },
+    "575515ae-3fba-457c-b4f7-391d29cb5313": {
+      "payload": "sample_data/java_1.dwl"
+    },
+    "4133a72b-9450-4d02-8321-5b5e601b06c8": {
+      "payload": "sample_data/java_2.dwl"
+    },
+    "e1bf3465-18ed-4d79-80f5-c01c923a29ca": {
+      "payload": "sample_data/csv_1.csv"
+    },
+    "f4afb836-e999-4ffb-9b73-3c783b56e9e8": {
+      "payload": "sample_data/list_json.json",
+      "vars-new": "sample_data/java_4.dwl",
+      "vars-accountRecords": "sample_data/java_3.dwl"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+
+
+http:
+  port: "8081"
+  
+Accounts:
+  host: "dev-accountdiy-proxy1-thil.us-e2.cloudhub.io"
+  port: "80"
+  client_id:  "8d104a2f68b04216a8c8e0fbb5e41ae3"
+  client_secret:  "c686bBB84E1745b4BAfaE8Cc7006A887"
+  enquiredBy: "value"
+  paidClient_id: "4ba8db8dea57469eb8dccbe7e77f5beb"
+  paidClient_secret:  "FFa5bbe2CF024e96b106181A05418d14"

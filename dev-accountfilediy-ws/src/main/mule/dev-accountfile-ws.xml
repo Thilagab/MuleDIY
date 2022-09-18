@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<flow name="readSingleRecord" doc:id="a6eed3cf-4155-446c-9728-058db51c5a5d" initialState="stopped">
+		<db:listener table="flights_customers" doc:name="On Table Row" doc:id="c820c31c-b57f-4296-a4a1-82fe6bd0c2ee" config-ref="Database_Config" watermarkColumn="country" idColumn="accountID">
+			<scheduling-strategy >
+				<fixed-frequency frequency="5" timeUnit="SECONDS" />
+			</scheduling-strategy>
+		</db:listener>
+		<set-variable value="#[payload.country]" doc:name="Set Variable" doc:id="15eda7dd-f99e-43d2-8081-b9539579abd8" variableName="country"/>
+		<ee:transform doc:name="Java to CSV" doc:id="e14c3086-379c-4e70-ab25-e56273ba3c8f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv header=false
+
+
+---
+
+[payload]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="98c6edc1-56f4-45e4-b269-fd77a3f02a25" config-ref="File_Config" path="#[dw::core::Strings::dasherize(vars.country as String ++ ' ' ++ (now() as String {format:'yyyyMMdd'} ) ++ '.csv')]" mode="APPEND"/>
+		<logger level="INFO" doc:name="Logger" doc:id="425ac175-40b6-4109-b941-7b89530e5ae6" message="#[payload]"/>
+	</flow>
+	<flow name="readBulkRecord" doc:id="3052697f-83fc-4279-b5cc-72a09c8cdce0" initialState="stopped">
+		<scheduler doc:name="Scheduler" doc:id="e2656d2f-6709-4868-bd7c-6850039a8ccc" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="5" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<os:retrieve doc:name="Retrieve" doc:id="54d1e0bf-9e77-4b37-95e4-ff33092fc73b" key="lastID" target="lastID">
+			<os:default-value ><![CDATA[0]]></os:default-value>
+		</os:retrieve>
+		<db:select doc:name="Select" doc:id="9e3f20fe-4796-4069-84e6-0561689c3e8b" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from flights_customers]]></db:sql>
+		</db:select>
+		<os:store doc:name="Store" doc:id="cdd87e0b-8978-47f8-8b47-f1b9a065f1e1" key="lastID">
+			<os:value ><![CDATA[#[max(payload.*accountID)]]]></os:value>
+		</os:store>
+		<logger level="INFO" doc:name="Logger" doc:id="64d15178-7db0-4e9e-b8b2-6febdb835662" message="#[payload]"/>
+		<foreach doc:name="For Each" doc:id="ab34f243-4c7d-49bb-9464-aab16edb6bc8" collection="#[payload groupBy(item)-&gt;item.country]">
+			<ee:transform doc:name="Transform Message" doc:id="4133a72b-9450-4d02-8321-5b5e601b06c8" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload 
+	]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<set-variable doc:name="countryName" doc:id="575515ae-3fba-457c-b4f7-391d29cb5313" variableName="country" value="#[payload[0][0].country]"/>
+			<file:write doc:name="writeToCSVFile" doc:id="eb189ff9-f104-42f6-bb50-72dcb1095cc1" path="#[dw::core::Strings::dasherize(vars.country ++  '  ' ++ (now() as String {format:'yyyyMMdd'}) ++ '.csv' )]" config-ref="File_Config" mode="APPEND">
+				<file:content ><![CDATA[#[output application/csv header=false
+---
+payload[0]]]]></file:content>
+		</file:write>
+			<logger level="INFO" doc:name="Logger" doc:id="85901423-7620-488d-94f6-899062b97059" message="#[payload]"/>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="608b4048-b20b-4419-a787-b1e7ad9bd95a" message="#[payload]"/>
+	</flow>
+	<flow name="dev-accountfile-wsFlow1" doc:id="cfb0ed1a-8214-45a5-972d-0e861e0087e4" initialState="stopped">
+		<file:listener doc:name="On New or Updated File" doc:id="d9b4ae7c-3fe8-46fa-8ac0-fad5bb6b4b89" config-ref="File_Config" autoDelete="true" outputMimeType="application/csv; header=false">
+			<scheduling-strategy >
+				<fixed-frequency/>
+			</scheduling-strategy>
+		</file:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="6e8fb488-3851-4086-a515-694ec449892f" message="#[payload]"/>
+		<ee:transform doc:name="CSV to Json" doc:id="e1bf3465-18ed-4d79-80f5-c01c923a29ca" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="accountRecords" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<batch:job jobName="dev-accountfile-wsBatch_Job" doc:id="cd543de4-dbbd-4bf4-907f-9a4823403257" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="cbffb921-9573-451f-8534-00d4c80cf51b" >
+					<set-variable value="#[payload]" doc:name="new" doc:id="c2f24be7-4307-4f59-b990-1669a591f01f" variableName="new"/>
+					<set-variable value="#[payload.column_0]" doc:name="accountID" doc:id="93494a31-6a97-446e-82ca-f70ec058c6d2" variableName="accountID" />
+					<db:select doc:name="SelectTransaction" doc:id="2ee22aec-02f7-4f7b-88fc-f90f90e49e45" config-ref="Database_Config">
+						<db:sql ><![CDATA[select * from flights_transactions  where customerRef = :ID]]></db:sql>
+						<db:input-parameters ><![CDATA[#[ID: vars.accountID]]]></db:input-parameters>
+					</db:select>
+				</batch:step>
+				<batch:step name="Batch_Step1" doc:id="6145eed1-8337-464e-9cf7-011153b3e0e9" >
+					<ee:transform doc:name="Java to Json" doc:id="1a214da2-1463-4916-976c-8f1ca2dffad4" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<choice doc:name="Choice" doc:id="03fc3abb-4988-4f8d-a2ce-6e4ecaf86089" >
+						<when expression="#[sizeOf(payload) &gt; 0 and  vars.accountID == payload.customerRef[0]]">
+							<ee:transform doc:name="AddExtraField" doc:id="f4afb836-e999-4ffb-9b73-3c783b56e9e8">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+account: vars.new ++ "transactions": payload]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+							<logger level="INFO" doc:name="Logger" doc:id="7e854889-0bc2-4c81-8a2a-521057a9a067" message="payload in step 1 ************************ #[  payload  ]" />
+						</when>
+						<otherwise >
+							<logger level="INFO" doc:name="Logger" doc:id="28bdd133-7bf2-4c74-bb21-f558faa74dd6" message="==============No transaction record found========================="/>
+						</otherwise>
+					</choice>
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="f973938d-a148-4eed-ae88-22fa7f2d09cd" size="3">
+						<logger level="INFO" doc:name="Logger" doc:id="609edba2-a8a3-4021-9825-00b621b25965" message="#[payload]"/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="0c55768f-4196-4211-a05d-700d23cceaf2" message="oncomplete log payload -----------------#[payload]"/>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+</mule>
